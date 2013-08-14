@@ -1,0 +1,101 @@
+<html>
+<head>
+	<title>NodeChat</title>
+	<style>
+		#content {display: none; height: 400px;  border: 2px #000 solid;}
+		#chatWrap {display: inline-block; height: 200px;}
+		#chatLog {height: 200px; color: blue;  border: 1px #000 solid; margin: 2px;}
+		#chatUsers {float: left; height: 200px; width: 50px; border: 1px #000 solid; }
+		#privateChatLog {display: block; height: 50px; border: 1px red solid;}
+	</style>
+	
+</head>
+<body>
+	<div id="login">
+		<p>Welcome to chat room</p>
+		<p id="loginError"></p>
+		<p>Enter username</p>
+		<form id="frmLogin">
+			<input size="35" id="txtLogin"></input>
+			<input type="submit" value="join"></input>
+		</form>
+	</div> 
+
+	<div id ="content">
+		<p>Chat room</p>
+		<div id="chatWrap">
+			<div id="chatUsers"></div>
+			<div id="chatMessaging">
+				<div id="chatLog"></div>
+				<form id="frmMsg">
+					<input size="45" id="txtMsg"></input>
+					<input type="submit" value="send"></input>
+				</form>
+				<div id="privateChatLog"></div>
+			</div>	
+		</div>
+	</div>
+
+	<script src="http://code.jquery.com/jquery-latest.min.js"></script>
+	<script src="/socket.io/socket.io.js"></script>
+	<script>
+		jQuery(function($){
+			var socket = io.connect();
+			var $loginForm = $('#frmLogin');
+			var $loginBox = $('#txtLogin');
+			var $loginError = $('#loginError');
+			var $messageForm = $('#frmMsg');
+			var $messageBox = $('#txtMsg');
+			var $chatLog = $('#chatLog');
+			var $privateChatLog = $('#privateChatLog');
+			var $chatUsers = $('#chatUsers');
+
+			$loginBox.focus();
+			
+			//join chat session
+			$loginForm.submit(function(e){
+				e.preventDefault();
+				socket.emit('tryLogon', $loginBox.val(), function(data){
+					//handle callback w/ success and fail (logon) branches
+					if (data){
+						$('#login').hide();
+						$('#content').show();
+					} else {
+						$loginError.html('Sorry, this name is already in use.  Please try another.');
+					}
+				});
+				$loginBox.val('');
+			});
+
+			//recieve user list from server
+			socket.on('userList', function(data){
+				var html = '';
+				for (var i = data.length - 1; i >= 0; i--) {
+					html += data[i] + '<br/>'
+				}
+				$chatUsers.html(html);
+			});
+
+			//send chat msg to chat room (server)
+			$messageForm.submit(function(e){
+				e.preventDefault();
+				socket.emit('msgToServer', $messageBox.val(), function(data){
+					$chat.append('<span class="error">' + data + "</span><br/>");
+				});
+				$messageBox.val('');
+			});
+
+			//receive new msg from server
+			socket.on('msgFromServer', function(data){
+				$chatLog.append('<b>' + data.user + '</b>: ' + data.msg + '<br/>')
+			});
+
+
+			//receive private msg (PM) from server
+			socket.on('privateMsgFromServer', function(data){
+				$privateChatLog.append('<b>' + data.user + '</b>: ' + data.msg + '<br/>')
+			});
+		});
+	</script>
+</body>
+</html>
