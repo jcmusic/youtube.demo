@@ -1,0 +1,42 @@
+           async function fetch_retry(url, options, n) {
+                console.log(n + ' tries left');
+                return await new Promise(function(resolve, reject) {
+                    fetch(url, options)
+                    .then((response) => {
+                        if (response.ok === false) {
+                            return Promise.reject('an error occurred while attempting to fetch the data')
+                            // or if you want to handle diff Http statuses individually ...
+                            // return Promise.reject({
+                            //     status: response.status,
+                            //     statusText: response.statusText
+                            // })
+                        }
+                        resolve(response);
+                    })                
+                    .catch(function(error) {
+                        if (n===1) return reject(error);
+                        resolve(fetch_retry(url, options, n - 1));
+                    })
+                });
+            }
+
+            let m =  fetch_retry('https://localhost:44360/api/v1/Authenticate/TestGet/false', 
+            { 'method': 'GET', 'Content-Type': 'application/json' }, 3)
+                .then(response => {
+                    console.log('response: ') 
+                    console.log( response)
+                    return response;
+                })
+                .then(async response => await response.text())  // if you don't await, response.text() throws error.
+                .then(data => {
+                    console.log('Response body: ' + data)
+                    return data;
+                })
+                .catch((err) => { 
+                    // if (error.status === 404) {
+                    //     // do something about 404
+                    // }
+                    console.log("Connection error! - " + err);
+                });
+            
+            console.log('m: ' + m);  // we don't need this "m", but it illustrates the asyc behavior in the console.
